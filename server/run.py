@@ -1,4 +1,4 @@
-from flask import Flask, jsonify,abort,make_response,request
+from flask import Flask, jsonify, abort, make_response, request
 import sqlite3
 
 NAME_BD = "../DB_of_tests.db"
@@ -10,6 +10,11 @@ def index():
     return "Hello, World!"
 
 
+# TODO: Сделать возможность редактировать юзера, и удалять.
+# TODO; Get Post Put Delete для всех остальных табличек
+# TODO: Tables: Labs, oneOFfour,ChooseFormula,insertNumber
+# TODO: Проверить работоспособность АПИ для JS)
+# TODO: Посмотреть возможности REACT
 @app.route('/testsystem/api/v1.0/users', methods=['GET'])
 def get_users():
     sql = """SELECT id, login, access_level FROM users"""
@@ -25,6 +30,8 @@ def get_user(user_id):
         return jsonify({"users": answer})
     else:
         return abort(404)
+
+
 @app.route('/testsystem/api/v1.0/users/add', methods=['POST'])
 def add_user():
     sql = """INSERT INTO users(login, password, access_level, confirm) VALUES (?,?,?,?)"""
@@ -33,11 +40,12 @@ def add_user():
         psw = request.json['password'] if request.json['password'] else None
         access_lvl = request.json['access_level'] if request.json['access_level'] else None
         if psw and login and access_lvl:
-            value = (login,psw,access_lvl,0)
-            make_sql_query_insert(sql,value)
-            return jsonify({"Answer":"Successfully"}), 201
+            value = (login, psw, access_lvl, 0)
+            make_sql_query_insert(sql, value)
+            return jsonify({"Answer": "Successfully"}), 201
     else:
         return abort(401)
+
 
 def make_sql_query_insert(sql, val):
     """
@@ -47,7 +55,9 @@ def make_sql_query_insert(sql, val):
     """
     with sqlite3.connect(NAME_BD) as con:
         cur = con.cursor()
-        response = cur.execute(sql,val).fetchall()
+        response = cur.execute(sql, val).fetchall()
+
+
 def make_sql_query_select(sql):
     def parse_sql_select(response, description):
         """
@@ -71,9 +81,11 @@ def make_sql_query_select(sql):
     answer = parse_sql_select(response, cur.description)
     return answer
 
+
 @app.errorhandler(404)
 def not_found(error):
-    return make_response(jsonify({"error":"Not Found"}),404)
+    return make_response(jsonify({"error": "Not Found"}), 404)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
