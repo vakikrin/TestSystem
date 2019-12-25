@@ -1,13 +1,17 @@
-from flask import Flask, jsonify, abort, make_response, request
+from flask import Flask, jsonify, abort, make_response, request, url_for,send_from_directory,render_template
 import sqlite3
-
+from flask import render_template
+from flask_cors import CORS
+# -*- coding: utf-8 -*-
 NAME_BD = "../DB_of_tests.db"
 app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False
+cors = CORS(app, resources={r"/testsystem/api/*": {"origins": "*"}})
 
 
 @app.route('/')
 def index():
-    return "Hello, World!"
+    return render_template("index.html")
 
 
 # TODO: Сделать возможность редактировать юзера, и удалять.
@@ -15,15 +19,51 @@ def index():
 # TODO: Tables: Labs, oneOFfour,ChooseFormula,insertNumber
 # TODO: Проверить работоспособность АПИ для JS)
 # TODO: Посмотреть возможности REACT
+def make_public_user(user):
+    new_user = {}
+    for field in user:
+        if field == "id":
+            new_user['uri'] = url_for('get_user', user_id=user['id'], _external=True)
+        else:
+            new_user[field] = user[field]
+    return new_user
+
+
+@app.route('/testsystem/api/v1.0/labs/<int:id_lab>/question_one_of_four', methods=['GET'])
+def get_question_one_of_four(id_lab):
+    sql = """SELECT id, textOfQuestion, correctAnswer, incorrectOptions1,incorrectOptions2,incorrectOptions3,lab FROM Q_one_of_four where lab=""" + str(
+        id_lab)
+    questions = make_sql_query_select(sql)
+    return jsonify({"Questions_one_of_four": questions})
+
+
+@app.route('/testsystem/api/v1.0/labs', methods=['GET'])
+def get_labs():
+    sql = """SELECT id, name FROM labs"""
+    labs = make_sql_query_select(sql)
+    return jsonify({"users": labs})
+
+
+@app.route('/testsystem/api/v1.0/labs/<int:id_lab>', methods=['GET'])
+def get_lab(id_lab):
+    sql = """SELECT id, name FROM labs WHERE id=""" + str(id_lab)
+    lab = make_sql_query_select(sql)
+    if lab:
+        return jsonify({"labs": lab})
+    else:
+        return abort(404)
+
+
 @app.route('/testsystem/api/v1.0/users', methods=['GET'])
 def get_users():
     sql = """SELECT id, login, access_level FROM users"""
-    answer = make_sql_query_select(sql)
-    return jsonify({"users": answer})
+    users = make_sql_query_select(sql)
+    users = [make_public_user(x) for x in users]
+    return jsonify({"users": users})
 
 
-@app.route('/testsystem/api/v1.0/users/<int:user_id>', methods=['GET'])
-def get_user(user_id):
+@app.route('/testsystem/api/v1.0/users_id/<int:user_id>', methods=['GET'])
+def get_user_id(user_id):
     sql = '''SELECT id,login, access_level FROM users WHERE id=''' + str(user_id)
     answer = make_sql_query_select(sql)
     if answer:
@@ -31,6 +71,15 @@ def get_user(user_id):
     else:
         return abort(404)
 
+# TODO: обезопазить пароль
+@app.route('/testsystem/api/v1.0/users_name/<string:username>', methods=['GET'])
+def get_user_name(username):
+    sql = '''SELECT id,login, access_level, password FROM users WHERE login="''' + username + "\""
+    answer = make_sql_query_select(sql)
+    if answer:
+        return jsonify({"users": answer})
+    else:
+        return abort(404)
 
 @app.route('/testsystem/api/v1.0/users/add', methods=['POST'])
 def add_user():
