@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, abort, make_response, request, url_for,send_from_directory,render_template
 import sqlite3
 from flask import render_template
-from flask_cors import CORS
+from flask_cors import CORS,cross_origin
 # -*- coding: utf-8 -*-
 NAME_BD = "../DB_of_tests.db"
 app = Flask(__name__)
@@ -29,19 +29,43 @@ def make_public_user(user):
     return new_user
 
 
-@app.route('/testsystem/api/v1.0/labs/<int:id_lab>/question_one_of_four', methods=['GET'])
+
 def get_question_one_of_four(id_lab):
-    sql = """SELECT id, textOfQuestion, correctAnswer, incorrectOptions1,incorrectOptions2,incorrectOptions3,lab FROM Q_one_of_four where lab=""" + str(
+    sql = """SELECT id, textOfQuestion, correctAnswer, incorrectOptions1,incorrectOptions2,incorrectOptions3,lab,typeQuestion FROM Q_one_of_four where lab=""" + str(
         id_lab)
     questions = make_sql_query_select(sql)
-    return jsonify({"Questions_one_of_four": questions})
+    return {"Questions_one_of_four": questions}
 
 
+def get_question_choose_of_formula(id_lab):
+    sql = """SELECT id, textOfQuestion, correctFormula, incorrectOptions1,incorrectOptions2,incorrectOptions3,lab,typeQuestion FROM Q_choose_of_formula where lab=""" + str(
+        id_lab)
+    questions = make_sql_query_select(sql)
+    return {"Questions_choose_of_formula": questions}
+
+def get_question_input_number(id_lab):
+    sql = """SELECT id, textOfQuestion, correctAnswer,lab,typeQuestion FROM Q_input_number where lab=""" + str(
+        id_lab)
+    questions = make_sql_query_select(sql)
+    return {"Questions_input_number": questions}
+
+
+@app.route('/testsystem/api/v1.0/labs/questions', methods=['GET','POST'])
+@cross_origin()
+def get_question():
+    if request.json:
+        id = request.json["idTest"]
+
+        return  jsonify(get_question_choose_of_formula(id),get_question_one_of_four(id),get_question_input_number(id))
+    else:
+        return abort(404)
+
+    
 @app.route('/testsystem/api/v1.0/labs', methods=['GET'])
 def get_labs():
     sql = """SELECT id, name FROM labs"""
     labs = make_sql_query_select(sql)
-    return jsonify({"users": labs})
+    return jsonify({"labs": labs})
 
 
 @app.route('/testsystem/api/v1.0/labs/<int:id_lab>', methods=['GET'])
@@ -135,6 +159,17 @@ def make_sql_query_select(sql):
 def not_found(error):
     return make_response(jsonify({"error": "Not Found"}), 404)
 
+@app.route('/testsystem/api/v1.0/users/<string:username>/<string:password>' , methods=['GET'])
+def log_in(username,password):
+    sql = '''SELECT password FROM users WHERE login="''' + username + "\""
+    answer = make_sql_query_select(sql)
+    if answer:
+        if answer[0]['password'] == password:
+            return jsonify({"log_in": 'Successfully'})
+        else:
+            return jsonify({'log_in': 'Reject'})
+    else:
+        return abort(404)
 
 if __name__ == '__main__':
     app.run(debug=True)
